@@ -12,3 +12,6 @@ build
 target
 cdk.out
 generated
+node_modules
+package-lock.json
+*.pyc
