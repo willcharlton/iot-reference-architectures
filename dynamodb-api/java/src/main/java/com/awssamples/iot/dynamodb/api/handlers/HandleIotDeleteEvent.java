@@ -2,13 +2,13 @@ package com.awssamples.iot.dynamodb.api.handlers;
 
 import com.awssamples.iot.dynamodb.api.SharedHelper;
 import com.awssamples.iot.dynamodb.api.handlers.interfaces.HandleIotEvent;
+import io.vavr.collection.HashMap;
+import io.vavr.control.Option;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.DeleteItemRequest;
 
-import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 
 public class HandleIotDeleteEvent implements HandleIotEvent {
     @Override
@@ -17,29 +17,29 @@ public class HandleIotDeleteEvent implements HandleIotEvent {
     }
 
     @Override
-    public String innerHandle(String responseToken, Optional<String> optionalUuid, Optional<String> optionalMessageId) {
-        String uuid = optionalUuid.get();
-        String messageId = optionalMessageId.get();
+    public String innerHandle(String responseToken, final Map input, Option<String> uuidOption, Option<String> messageIdOption, Option<String> recipientIdOption) {
+        String messageId = messageIdOption.get();
+        String uuid = uuidOption.get();
 
         // Delete the row with the exact UUID and message ID values
-        Map<String, AttributeValue> key = new HashMap<>();
-        key.put(SharedHelper.UUID, AttributeValue.builder().s(uuid).build());
-        key.put(SharedHelper.MESSAGE_ID, AttributeValue.builder().s(messageId).build());
+        HashMap<String, AttributeValue> key = HashMap.of(
+                SharedHelper.UUID_DYNAMO_DB_COLUMN_NAME, AttributeValue.builder().s(uuid).build(),
+                SharedHelper.MESSAGE_ID_DYNAMO_DB_COLUMN_NAME, AttributeValue.builder().s(messageId).build());
 
         DeleteItemRequest deleteItemRequest = DeleteItemRequest.builder()
                 .tableName(SharedHelper.getTableName())
-                .key(key)
+                .key(key.toJavaMap())
                 .build();
         DynamoDbClient.create().deleteItem(deleteItemRequest);
 
         // Return a payload on the response topic that contains the UUID and deleted message ID. This response only
         //   indicates that a record was deleted if it was present. If the record was not present then this the previous
         //   delete operation is a NOOP.
-        Map<String, String> payloadMap = new HashMap<>();
-        payloadMap.put(SharedHelper.UUID, uuid);
-        payloadMap.put(SharedHelper.MESSAGE_ID, messageId);
+        HashMap<String, String> payloadMap = HashMap.of(
+                SharedHelper.UUID_DYNAMO_DB_COLUMN_NAME, uuid,
+                SharedHelper.MESSAGE_ID_DYNAMO_DB_COLUMN_NAME, messageId);
 
-        publishResponse(responseToken, payloadMap);
+        publishResponse(uuidOption, messageIdOption, Option.none(), responseToken, payloadMap);
 
         return "done";
     }
@@ -51,8 +51,12 @@ public class HandleIotDeleteEvent implements HandleIotEvent {
     }
 
     @Override
-    public boolean isUuidRequired() {
-        // Yes, we need the UUID for a delete message request
+    public boolean isRecipientUuidRequired() {
+        return false;
+    }
+
+    @Override
+    public boolean isDeviceUuidRequired() {
         return true;
     }
 }
