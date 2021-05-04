@@ -24,3 +24,5 @@ aws-iot-sdk-browser-bundle-min.js
 *.key
 *.csr
 *.pem
+/partner-attribution/golang/sample
+*.sum
