@@ -5,7 +5,7 @@ import org.wisepersist.gradle.plugins.gwt.GwtPluginExtension
 import org.wisepersist.gradle.plugins.gwt.GwtSuperDevOptions
 
 plugins {
-    kotlin("jvm") version "1.4.31"
+    kotlin("jvm") version "1.5.0"
     id("application")
     id("java")
     id("idea")
@@ -13,10 +13,10 @@ plugins {
     id("war")
 
     // Creates fat JAR
-    id("com.github.johnrengelman.shadow") version "6.1.0"
+    id("com.github.johnrengelman.shadow") version "7.0.0"
 
     id("org.wisepersist.gwt") version "1.1.11"
-    id("org.gretty") version "3.0.3"
+    id("org.gretty") version "3.0.4"
 
     id("com.github.ben-manes.versions") version "0.38.0"
 }
@@ -26,8 +26,8 @@ extensions.findByName("buildScan")?.withGroovyBuilder {
     setProperty("termsOfServiceAgree", "yes")
 }
 
-idea.module.setDownloadSources(true)
-idea.module.setDownloadJavadoc(true)
+idea.module.isDownloadSources = true
+idea.module.isDownloadJavadoc = true
 
 java.toolchain.languageVersion.set(JavaLanguageVersion.of(8))
 
@@ -40,7 +40,7 @@ sourceSets {
 // Required for shadow JAR but we don't use it. Can not be replaced with application.mainClass.set.
 application.mainClassName = "not-necessary"
 
-val gradleDependencyVersion = "6.8.1"
+val gradleDependencyVersion = "7.0"
 
 tasks.wrapper {
     gradleVersion = gradleDependencyVersion
@@ -49,6 +49,7 @@ tasks.wrapper {
 
 repositories {
     mavenCentral()
+    mavenLocal()
     // Required for gretty
     jcenter()
     // Required for AWS Lambda Servlet annotation processor
@@ -67,25 +68,23 @@ tasks.shadowDistZip { enabled = false }
 tasks.shadowDistTar { enabled = false }
 
 val awsLambdaJavaCoreVersion = "1.2.1"
-val awsLambdaJavaLog4jVersion = "1.0.1"
-val jacksonVersion = "2.12.2"
+val awsLambdaJavaLog4j2Version = "1.2.0"
+val jacksonVersion = "2.12.3"
 val vavrVersion = "0.10.3"
-val awsSdk2Version = "2.16.19"
+val awsSdk2Version = "2.16.50"
 val gwtServletVersion = "2.9.0"
 val junitVersion = "4.13.2"
-val jettyVersion = "11.0.1"
-val slf4jSimpleVersion = "1.7.30"
+val jettyVersion = "9.4.39.v20210325"
 val bouncyCastleVersion = "1.68"
 val vertxVersion = "4.0.3"
-val jjwtVersion = "3.14.0"
+val jjwtVersion = "3.15.0"
 val dominoKitVersion = "1.0-alpha-gwt2.8.2-SNAPSHOT"
 val dominoMvpVersion = "1.0-ps-SNAPSHOT"
-val awsCdkConstructsForJava = "0.5.6"
-val awsLambdaServletVersion = "0.2.4"
+val awsCdkConstructsForJava = "0.8.3"
+val awsLambdaServletVersion = "0.3.3"
+val log4jVersion = "2.14.1"
 
 dependencies {
-    implementation("com.amazonaws:aws-lambda-java-core:$awsLambdaJavaCoreVersion")
-    implementation("com.amazonaws:aws-lambda-java-log4j:$awsLambdaJavaLog4jVersion")
     implementation("com.fasterxml.jackson.core:jackson-core:$jacksonVersion")
     implementation("com.fasterxml.jackson.core:jackson-databind:$jacksonVersion")
     implementation("com.fasterxml.jackson.core:jackson-annotations:$jacksonVersion")
@@ -97,7 +96,14 @@ dependencies {
     implementation("com.google.gwt:gwt-servlet:$gwtServletVersion")
     implementation("org.eclipse.jetty:jetty-servlet:$jettyVersion")
     implementation("org.eclipse.jetty:jetty-server:$jettyVersion")
-    implementation("org.slf4j:slf4j-simple:$slf4jSimpleVersion")
+
+    // Lambda core and logging
+    implementation("com.amazonaws:aws-lambda-java-core:$awsLambdaJavaCoreVersion")
+    implementation("org.apache.logging.log4j:log4j-api:$log4jVersion")
+    implementation("org.apache.logging.log4j:log4j-core:$log4jVersion")
+    api("org.apache.logging.log4j:log4j-slf4j18-impl:$log4jVersion")
+    api("com.amazonaws:aws-lambda-java-log4j2:$awsLambdaJavaLog4j2Version")
+
     implementation("com.auth0:java-jwt:$jjwtVersion")
     implementation("io.vertx:vertx-core:$vertxVersion")
     implementation("org.bouncycastle:bcprov-jdk15on:$bouncyCastleVersion")
@@ -192,6 +198,9 @@ tasks.war {
 }
 
 tasks.shadowJar {
+    // To prevent broken log4j2 configurations - see https://stackoverflow.com/a/61475766
+    transform(com.github.jengelman.gradle.plugins.shadow.transformers.Log4j2PluginsCacheFileTransformer::class.java)
+
     // Wait until the war is generated so we can get the files from its output directory
     dependsOn += tasks.war
     dependsOn += tasks.warTemplate
@@ -306,4 +315,12 @@ val createDockerContainerForBrowserBundle by tasks.registering(Exec::class) {
 
 val serverCode by tasks.registering(Exec::class) {
     inputs.files(fileTree(""))
+}
+
+configurations.all {
+    resolutionStrategy.dependencySubstitution {
+        // This library is not yet in the Maven repositories
+        substitute(module("org.dominokit:domino-aggregator-shared:1.0.2"))
+            .using(module("org.dominokit:domino-aggregator-shared:1.0.2"))
+    }
 }

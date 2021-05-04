@@ -28,7 +28,6 @@ import static com.aws.samples.cdk.helpers.CdkHelper.NO_SEPARATOR;
 import static com.aws.samples.cdk.helpers.IotHelper.*;
 import static com.aws.samples.cdk.helpers.ReflectionHelper.HANDLE_REQUEST;
 import static com.aws.samples.cdk.helpers.RoleHelper.buildRoleAssumedByLambda;
-import static com.aws.samples.cdk.helpers.RoleHelper.combinePolicyStatements;
 import static com.aws.samples.cdk.helpers.RulesEngineSqlHelper.buildIotEventRule;
 
 public class SqsToIotCoreStack extends software.amazon.awscdk.core.Stack implements JavaGradleStack {
@@ -353,7 +352,7 @@ public class SqsToIotCoreStack extends software.amazon.awscdk.core.Stack impleme
                 .memorySize(1024)
                 .timeout(lambdaFunctionTimeout)
                 .environment(environment.toJavaMap())
-                .runtime(Runtime.JAVA_8)
+                .runtime(Runtime.JAVA_11)
                 .role(role)
                 .tracing(Tracing.ACTIVE)
                 .build();
@@ -374,7 +373,7 @@ public class SqsToIotCoreStack extends software.amazon.awscdk.core.Stack impleme
                 .memorySize(1024)
                 .timeout(lambdaFunctionTimeout)
                 .environment(environment.toJavaMap())
-                .runtime(Runtime.JAVA_8)
+                .runtime(Runtime.JAVA_11)
                 .role(role)
                 .tracing(Tracing.ACTIVE)
                 .build();
@@ -426,13 +425,13 @@ public class SqsToIotCoreStack extends software.amazon.awscdk.core.Stack impleme
     private Role buildIotEventRoleForTopic(String roleName, String topic, List<PolicyStatement> policyStatements, List<ManagedPolicy> managedPolicies) {
         PolicyStatement iotPolicyStatement = getPublishToTopicPolicyStatement(this, topic);
 
-        return buildRoleAssumedByLambda(this, roleName, combinePolicyStatements(policyStatements, iotPolicyStatement), managedPolicies);
+        return buildRoleAssumedByLambda(this, roleName, List.ofAll(policyStatements).append(iotPolicyStatement), managedPolicies);
     }
 
     private Role buildIotEventRoleForTopicPrefix(String roleName, String topicPrefix, List<PolicyStatement> policyStatements, List<ManagedPolicy> managedPolicies) {
         PolicyStatement iotPolicyStatement = getPublishToTopicPrefixPolicyStatement(this, topicPrefix);
 
-        return buildRoleAssumedByLambda(this, roleName, combinePolicyStatements(policyStatements, iotPolicyStatement), managedPolicies);
+        return buildRoleAssumedByLambda(this, roleName, List.ofAll(policyStatements).append(iotPolicyStatement), managedPolicies);
     }
 
     private PolicyStatement getGetItemPolicyStatementForTable(Table table) {

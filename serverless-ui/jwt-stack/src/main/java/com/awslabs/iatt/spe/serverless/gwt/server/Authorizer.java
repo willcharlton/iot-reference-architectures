@@ -8,12 +8,12 @@ import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.interfaces.Claim;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import com.aws.samples.cdk.annotations.CdkAutoWire;
+import com.aws.samples.cdk.constructs.autowired.iot.IotCustomAuthorizer;
 import com.aws.samples.cdk.constructs.iam.permissions.HasIamPermissions;
 import com.aws.samples.cdk.constructs.iam.permissions.IamPermission;
 import com.aws.samples.cdk.constructs.iam.permissions.iot.IotActions;
 import com.aws.samples.cdk.constructs.iam.permissions.iot.IotResources;
 import com.aws.samples.cdk.constructs.iam.permissions.sts.actions.GetCallerIdentity;
-import com.aws.samples.cdk.constructs.iot.authorizer.IotCustomAuthorizer;
 import com.aws.samples.cdk.constructs.iot.authorizer.data.ImmutableTokenSigningConfiguration;
 import com.aws.samples.cdk.constructs.iot.authorizer.data.ImmutableTokenSigningKey;
 import com.aws.samples.cdk.constructs.iot.authorizer.data.TokenSigningConfiguration;
@@ -220,7 +220,7 @@ public class Authorizer implements IotCustomAuthorizer, HasIamPermissions {
         authorizationResponse.isAuthenticated = true;
         authorizationResponse.principalId = clientId;
         authorizationResponse.disconnectAfterInSeconds = 86400;
-        authorizationResponse.refreshAfterInSeconds = 300;
+        authorizationResponse.refreshAfterInSecs = 300;
         authorizationResponse.policyDocuments = policyDocuments.asJava();
 
         return authorizationResponse;
